@@ -1,10 +1,13 @@
 use strsim::levenshtein;
 use chrono::{Datelike, Local, NaiveDate, Duration};
+use std::sync::OnceLock;
 
+#[derive(Debug, Clone)]
 pub struct ParseConfig {
     pub day_first: bool,
     pub resolve_dates: bool,
     pub mock_now: Option<NaiveDate>,
+    pub debug: bool,
 }
 
 impl Default for ParseConfig {
@@ -13,6 +16,7 @@ impl Default for ParseConfig {
             day_first: false,
             resolve_dates: true,
             mock_now: None,
+            debug: false,
         }
     }
 }
@@ -59,7 +63,7 @@ pub enum Unit { Day, Week, Month, Year }
 pub enum TimeZoneKind {
     Z,
     Utc,
-    Offset { hours: i8, minutes: i8 },
+    Offset { minutes_total: i16 },
     Named(String),
 }
 
@@ -101,21 +105,127 @@ pub enum KnownToken {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub enum UnknownToken {
-    Word(String),
+pub struct ScoredToken {
+    pub token: KnownToken,
+    pub score: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum Token {
-    Known(KnownToken),
-    Unknown(UnknownToken),
+    Known(ScoredToken),
+    Unknown { word: String, candidates: Vec<ScoredToken> },
     Noise(String),
+}
+
+pub fn get_dict() -> &'static [(&'static str, KnownToken)] {
+    static DICT: OnceLock<Vec<(&'static str, KnownToken)>> = OnceLock::new();
+    DICT.get_or_init(|| {
+        vec![
+            ("monday", KnownToken::Weekday(Weekday::Monday)),
+            ("mon", KnownToken::Weekday(Weekday::Monday)),
+            ("tuesday", KnownToken::Weekday(Weekday::Tuesday)),
+            ("tue", KnownToken::Weekday(Weekday::Tuesday)),
+            ("tues", KnownToken::Weekday(Weekday::Tuesday)),
+            ("wednesday", KnownToken::Weekday(Weekday::Wednesday)),
+            ("wed", KnownToken::Weekday(Weekday::Wednesday)),
+            ("thursday", KnownToken::Weekday(Weekday::Thursday)),
+            ("thu", KnownToken::Weekday(Weekday::Thursday)),
+            ("thurs", KnownToken::Weekday(Weekday::Thursday)),
+            ("friday", KnownToken::Weekday(Weekday::Friday)),
+            ("fri", KnownToken::Weekday(Weekday::Friday)),
+            ("frday", KnownToken::Weekday(Weekday::Friday)),
+            ("fryday", KnownToken::Weekday(Weekday::Friday)),
+            ("saturday", KnownToken::Weekday(Weekday::Saturday)),
+            ("sat", KnownToken::Weekday(Weekday::Saturday)),
+            ("sunday", KnownToken::Weekday(Weekday::Sunday)),
+            ("sun", KnownToken::Weekday(Weekday::Sunday)),
+
+            ("january", KnownToken::Month(Month::Jan)),
+            ("jan", KnownToken::Month(Month::Jan)),
+            ("february", KnownToken::Month(Month::Feb)),
+            ("feb", KnownToken::Month(Month::Feb)),
+            ("march", KnownToken::Month(Month::Mar)),
+            ("mar", KnownToken::Month(Month::Mar)),
+            ("april", KnownToken::Month(Month::Apr)),
+            ("apr", KnownToken::Month(Month::Apr)),
+            ("may", KnownToken::Month(Month::May)),
+            ("june", KnownToken::Month(Month::Jun)),
+            ("jun", KnownToken::Month(Month::Jun)),
+            ("july", KnownToken::Month(Month::Jul)),
+            ("jul", KnownToken::Month(Month::Jul)),
+            ("august", KnownToken::Month(Month::Aug)),
+            ("aug", KnownToken::Month(Month::Aug)),
+            ("september", KnownToken::Month(Month::Sep)),
+            ("sep", KnownToken::Month(Month::Sep)),
+            ("sept", KnownToken::Month(Month::Sep)),
+            ("october", KnownToken::Month(Month::Oct)),
+            ("oct", KnownToken::Month(Month::Oct)),
+            ("november", KnownToken::Month(Month::Nov)),
+            ("nov", KnownToken::Month(Month::Nov)),
+            ("december", KnownToken::Month(Month::Dec)),
+            ("dec", KnownToken::Month(Month::Dec)),
+
+            ("today", KnownToken::RelativeDay(RelativeDay::Today)),
+            ("tomorrow", KnownToken::RelativeDay(RelativeDay::Tomorrow)),
+            ("tmrw", KnownToken::RelativeDay(RelativeDay::Tomorrow)),
+            ("tmr", KnownToken::RelativeDay(RelativeDay::Tomorrow)),
+            ("tomorow", KnownToken::RelativeDay(RelativeDay::Tomorrow)),
+            ("yesterday", KnownToken::RelativeDay(RelativeDay::Yesterday)),
+
+            ("next", KnownToken::Modifier(Modifier::Next)),
+            ("nxt", KnownToken::Modifier(Modifier::Next)),
+            ("last", KnownToken::Modifier(Modifier::Last)),
+            ("lst", KnownToken::Modifier(Modifier::Last)),
+            ("this", KnownToken::Modifier(Modifier::This)),
+
+            ("day", KnownToken::Unit(Unit::Day)),
+            ("days", KnownToken::Unit(Unit::Day)),
+            ("week", KnownToken::Unit(Unit::Week)),
+            ("weeks", KnownToken::Unit(Unit::Week)),
+            ("month", KnownToken::Unit(Unit::Month)),
+            ("months", KnownToken::Unit(Unit::Month)),
+            ("year", KnownToken::Unit(Unit::Year)),
+            ("years", KnownToken::Unit(Unit::Year)),
+
+            ("at", KnownToken::At),
+            ("on", KnownToken::At),
+            ("in", KnownToken::At),
+            
+            ("morning", KnownToken::Time { hour: 9, min: 0, sec: None, formatted: "09:00:00".to_string() }),
+            ("mrning", KnownToken::Time { hour: 9, min: 0, sec: None, formatted: "09:00:00".to_string() }),
+            ("noon", KnownToken::Time { hour: 12, min: 0, sec: None, formatted: "12:00:00".to_string() }),
+            ("afternoon", KnownToken::Time { hour: 15, min: 0, sec: None, formatted: "15:00:00".to_string() }),
+            ("evening", KnownToken::Time { hour: 18, min: 0, sec: None, formatted: "18:00:00".to_string() }),
+            ("evning", KnownToken::Time { hour: 18, min: 0, sec: None, formatted: "18:00:00".to_string() }),
+            ("night", KnownToken::Time { hour: 21, min: 0, sec: None, formatted: "21:00:00".to_string() }),
+            ("nite", KnownToken::Time { hour: 21, min: 0, sec: None, formatted: "21:00:00".to_string() }),
+            
+            ("newyearsday", KnownToken::Holiday(Holiday::NewYearsDay)),
+            ("christmas", KnownToken::Holiday(Holiday::Christmas)),
+            ("independenceday", KnownToken::Holiday(Holiday::IndependenceDay)),
+            ("halloween", KnownToken::Holiday(Holiday::Halloween)),
+            ("thanksgiving", KnownToken::Holiday(Holiday::Thanksgiving)),
+            ("memorialday", KnownToken::Holiday(Holiday::MemorialDay)),
+            ("laborday", KnownToken::Holiday(Holiday::LaborDay)),
+            ("mlkday", KnownToken::Holiday(Holiday::MlkDay)),
+            ("presidentsday", KnownToken::Holiday(Holiday::PresidentsDay)),
+            ("veteransday", KnownToken::Holiday(Holiday::VeteransDay)),
+            ("juneteenth", KnownToken::Holiday(Holiday::Juneteenth)),
+            ("valentinesday", KnownToken::Holiday(Holiday::ValentinesDay)),
+            ("boxingday", KnownToken::Holiday(Holiday::BoxingDay)),
+            ("guyfawkes", KnownToken::Holiday(Holiday::GuyFawkes)),
+            ("stpatricksday", KnownToken::Holiday(Holiday::StPatricksDay)),
+            ("mayday", KnownToken::Holiday(Holiday::MayDay)),
+            ("springbankholiday", KnownToken::Holiday(Holiday::SpringBankHoliday)),
+            ("summerbankholiday", KnownToken::Holiday(Holiday::SummerBankHoliday)),
+        ]
+    })
 }
 
 pub fn normalize(input: &str) -> String {
     let mut out = String::with_capacity(input.len() + 4);
     let lower = input.to_lowercase();
-    let replaced = lower.replace('@', " at ").replace('\'', "").replace("o clock", "oclock");
+    let replaced = lower.replace('@', " at ").replace('\'', "").replace("o clock", "oclock").replace('|', ":").replace(';', ":");
     
     let phrases = [
         ("new years day", "newyearsday"),
@@ -150,7 +260,7 @@ pub fn normalize(input: &str) -> String {
     let mut in_space = false;
     
     while let Some(c) = chars.next() {
-        if c == ',' || c == '!' || c == '?' || c == '|' || c == ';' {
+        if c == ',' || c == '!' || c == '?' {
             if !in_space {
                 out.push(' ');
                 in_space = true;
@@ -279,183 +389,7 @@ pub fn tokenize(input: &str) -> Vec<RawToken> {
     }).collect()
 }
 
-pub fn recombine(raw: Vec<RawToken>) -> Vec<RawToken> {
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < raw.len() {
-        if i + 1 < raw.len() {
-            let s1 = raw[i].as_str();
-            let s2 = raw[i+1].as_str();
-            
-            // Recombine time strings like "3 pm" -> "3pm"
-            let combined_time = format!("{}{}", s1, s2);
-            if let Some(_) = parse_time(&combined_time) {
-                if s1.chars().all(|c| c.is_ascii_digit()) && (s2 == "am" || s2 == "pm") {
-                    out.push(RawToken::Time(combined_time));
-                    i += 2;
-                    continue;
-                }
-            }
-            
-            // Handle adjacent numbers becoming time like "9 30" -> "9:30"
-            if let (RawToken::Number(n1), RawToken::Number(n2)) = (&raw[i], &raw[i+1]) {
-                if let (Ok(h), Ok(m)) = (n1.parse::<u8>(), n2.parse::<u8>()) {
-                    if h < 24 && m < 60 {
-                        let combined_time = format!("{:02}:{:02}", h, m);
-                        out.push(RawToken::Time(combined_time));
-                        i += 2;
-                        continue;
-                    }
-                }
-            }
-
-            let combined_word = format!("{}{}", s1, s2);
-            if lookup_dict(&combined_word).is_some() {
-                out.push(RawToken::Word(combined_word));
-                i += 2;
-                continue;
-            }
-
-            let combined_word_space = format!("{} {}", s1, s2);
-            if lookup_dict(&combined_word_space).is_some() {
-                out.push(RawToken::Word(combined_word_space));
-                i += 2;
-                continue;
-            }
-        }
-        out.push(raw[i].clone());
-        i += 1;
-    }
-    out
-}
-
-pub fn lookup_dict(word: &str) -> Option<KnownToken> {
-    match word {
-        "monday" | "mon" => Some(KnownToken::Weekday(Weekday::Monday)),
-        "tuesday" | "tue" | "tues" => Some(KnownToken::Weekday(Weekday::Tuesday)),
-        "wednesday" | "wed" => Some(KnownToken::Weekday(Weekday::Wednesday)),
-        "thursday" | "thu" | "thurs" => Some(KnownToken::Weekday(Weekday::Thursday)),
-        "friday" | "fri" | "frday" | "fryday" => Some(KnownToken::Weekday(Weekday::Friday)),
-        "saturday" | "sat" => Some(KnownToken::Weekday(Weekday::Saturday)),
-        "sunday" | "sun" => Some(KnownToken::Weekday(Weekday::Sunday)),
-
-        "january" | "jan" => Some(KnownToken::Month(Month::Jan)),
-        "february" | "feb" => Some(KnownToken::Month(Month::Feb)),
-        "march" | "mar" => Some(KnownToken::Month(Month::Mar)),
-        "april" | "apr" => Some(KnownToken::Month(Month::Apr)),
-        "may" => Some(KnownToken::Month(Month::May)),
-        "june" | "jun" => Some(KnownToken::Month(Month::Jun)),
-        "july" | "jul" => Some(KnownToken::Month(Month::Jul)),
-        "august" | "aug" => Some(KnownToken::Month(Month::Aug)),
-        "september" | "sep" | "sept" => Some(KnownToken::Month(Month::Sep)),
-        "october" | "oct" => Some(KnownToken::Month(Month::Oct)),
-        "november" | "nov" => Some(KnownToken::Month(Month::Nov)),
-        "december" | "dec" => Some(KnownToken::Month(Month::Dec)),
-
-        "today" => Some(KnownToken::RelativeDay(RelativeDay::Today)),
-        "tomorrow" | "tmrw" | "tmr" | "tomorow" => Some(KnownToken::RelativeDay(RelativeDay::Tomorrow)),
-        "yesterday" => Some(KnownToken::RelativeDay(RelativeDay::Yesterday)),
-
-        "next" | "nxt" => Some(KnownToken::Modifier(Modifier::Next)),
-        "last" | "lst" => Some(KnownToken::Modifier(Modifier::Last)),
-        "this" => Some(KnownToken::Modifier(Modifier::This)),
-
-        "day" | "days" => Some(KnownToken::Unit(Unit::Day)),
-        "week" | "weeks" => Some(KnownToken::Unit(Unit::Week)),
-        "month" | "months" => Some(KnownToken::Unit(Unit::Month)),
-        "year" | "years" => Some(KnownToken::Unit(Unit::Year)),
-
-        "at" | "on" | "in" => Some(KnownToken::At),
-        
-        "morning" | "mrning" => Some(KnownToken::Time { hour: 9, min: 0, sec: None, formatted: "09:00:00".to_string() }),
-        "noon" => Some(KnownToken::Time { hour: 12, min: 0, sec: None, formatted: "12:00:00".to_string() }),
-        "afternoon" => Some(KnownToken::Time { hour: 15, min: 0, sec: None, formatted: "15:00:00".to_string() }),
-        "evening" | "evning" => Some(KnownToken::Time { hour: 18, min: 0, sec: None, formatted: "18:00:00".to_string() }),
-        "night" | "nite" => Some(KnownToken::Time { hour: 21, min: 0, sec: None, formatted: "21:00:00".to_string() }),
-        
-        "newyearsday" => Some(KnownToken::Holiday(Holiday::NewYearsDay)),
-        "christmas" => Some(KnownToken::Holiday(Holiday::Christmas)),
-        "independenceday" => Some(KnownToken::Holiday(Holiday::IndependenceDay)),
-        "halloween" => Some(KnownToken::Holiday(Holiday::Halloween)),
-        "thanksgiving" => Some(KnownToken::Holiday(Holiday::Thanksgiving)),
-        "memorialday" => Some(KnownToken::Holiday(Holiday::MemorialDay)),
-        "laborday" => Some(KnownToken::Holiday(Holiday::LaborDay)),
-        "mlkday" => Some(KnownToken::Holiday(Holiday::MlkDay)),
-        "presidentsday" => Some(KnownToken::Holiday(Holiday::PresidentsDay)),
-        "veteransday" => Some(KnownToken::Holiday(Holiday::VeteransDay)),
-        "juneteenth" => Some(KnownToken::Holiday(Holiday::Juneteenth)),
-        "valentinesday" => Some(KnownToken::Holiday(Holiday::ValentinesDay)),
-        "boxingday" => Some(KnownToken::Holiday(Holiday::BoxingDay)),
-        "guyfawkes" => Some(KnownToken::Holiday(Holiday::GuyFawkes)),
-        "stpatricksday" => Some(KnownToken::Holiday(Holiday::StPatricksDay)),
-        "mayday" => Some(KnownToken::Holiday(Holiday::MayDay)),
-        "springbankholiday" => Some(KnownToken::Holiday(Holiday::SpringBankHoliday)),
-        "summerbankholiday" => Some(KnownToken::Holiday(Holiday::SummerBankHoliday)),
-        
-        _ => None,
-    }
-}
-
-pub fn fuzzy_match(token: &str) -> Option<(KnownToken, f32)> {
-    let dict = vec![
-        ("monday", KnownToken::Weekday(Weekday::Monday)),
-        ("tuesday", KnownToken::Weekday(Weekday::Tuesday)),
-        ("wednesday", KnownToken::Weekday(Weekday::Wednesday)),
-        ("thursday", KnownToken::Weekday(Weekday::Thursday)),
-        ("friday", KnownToken::Weekday(Weekday::Friday)),
-        ("saturday", KnownToken::Weekday(Weekday::Saturday)),
-        ("sunday", KnownToken::Weekday(Weekday::Sunday)),
-        ("january", KnownToken::Month(Month::Jan)),
-        ("february", KnownToken::Month(Month::Feb)),
-        ("march", KnownToken::Month(Month::Mar)),
-        ("april", KnownToken::Month(Month::Apr)),
-        ("may", KnownToken::Month(Month::May)),
-        ("june", KnownToken::Month(Month::Jun)),
-        ("july", KnownToken::Month(Month::Jul)),
-        ("august", KnownToken::Month(Month::Aug)),
-        ("september", KnownToken::Month(Month::Sep)),
-        ("october", KnownToken::Month(Month::Oct)),
-        ("november", KnownToken::Month(Month::Nov)),
-        ("december", KnownToken::Month(Month::Dec)),
-        ("today", KnownToken::RelativeDay(RelativeDay::Today)),
-        ("tomorrow", KnownToken::RelativeDay(RelativeDay::Tomorrow)),
-        ("yesterday", KnownToken::RelativeDay(RelativeDay::Yesterday)),
-        ("next", KnownToken::Modifier(Modifier::Next)),
-        ("last", KnownToken::Modifier(Modifier::Last)),
-        ("this", KnownToken::Modifier(Modifier::This)),
-        ("morning", KnownToken::Time { hour: 9, min: 0, sec: None, formatted: "09:00:00".to_string() }),
-        ("afternoon", KnownToken::Time { hour: 15, min: 0, sec: None, formatted: "15:00:00".to_string() }),
-        ("evening", KnownToken::Time { hour: 18, min: 0, sec: None, formatted: "18:00:00".to_string() }),
-        ("night", KnownToken::Time { hour: 21, min: 0, sec: None, formatted: "21:00:00".to_string() }),
-        ("noon", KnownToken::Time { hour: 12, min: 0, sec: None, formatted: "12:00:00".to_string() }),
-    ];
-
-    let mut best_match = None;
-    let mut best_score = 0.0;
-
-    for (word, known) in dict {
-        let dist = levenshtein(token, word) as f32;
-        let max_len = token.len().max(word.len()) as f32;
-        let mut score = 1.0 - (dist / max_len);
-        
-        if word.starts_with(token) {
-            score += 0.1;
-        }
-
-        if score > best_score {
-            best_score = score;
-            best_match = Some(known.clone());
-        }
-    }
-
-    if best_score >= 0.75 {
-        best_match.map(|m| (m, best_score))
-    } else {
-        None
-    }
-}
-
-pub fn parse_date_numeric(s: &str, config: &ParseConfig) -> Option<KnownToken> {
+pub fn parse_date_numeric_scored(s: &str, config: &ParseConfig) -> Option<(KnownToken, f32)> {
     let parts: Vec<&str> = s.split(|c| c == '/' || c == '-' || c == '.').collect();
     if parts.len() == 3 {
         let p1 = parts[0].parse::<i32>().ok()?;
@@ -470,22 +404,29 @@ pub fn parse_date_numeric(s: &str, config: &ParseConfig) -> Option<KnownToken> {
 
         if p1 > 1000 {
             if p2 > 12 && p3 <= 12 {
-                return Some(KnownToken::DateNumeric { y: Some(p1), m: p3 as u8, d: p2 as u8 });
+                return Some((KnownToken::DateNumeric { y: Some(p1), m: p3 as u8, d: p2 as u8 }, 0.95));
             }
             if p2 <= 12 && p3 <= 31 {
-                return Some(KnownToken::DateNumeric { y: Some(p1), m: p2 as u8, d: p3 as u8 });
+                return Some((KnownToken::DateNumeric { y: Some(p1), m: p2 as u8, d: p3 as u8 }, 0.95));
             }
             return None;
         }
 
         if p3 > 1000 {
-            if config.day_first || p1 > 12 {
+            if p1 <= 12 && p2 <= 12 {
+                let score = 0.9;
+                if config.day_first {
+                    return Some((KnownToken::DateNumeric { y: Some(p3), m: p2 as u8, d: p1 as u8 }, score));
+                } else {
+                    return Some((KnownToken::DateNumeric { y: Some(p3), m: p1 as u8, d: p2 as u8 }, score));
+                }
+            } else if config.day_first || p1 > 12 {
                 if p2 <= 12 && p1 <= 31 {
-                    return Some(KnownToken::DateNumeric { y: Some(p3), m: p2 as u8, d: p1 as u8 });
+                    return Some((KnownToken::DateNumeric { y: Some(p3), m: p2 as u8, d: p1 as u8 }, 0.9));
                 }
             } else {
                 if p1 <= 12 && p2 <= 31 {
-                    return Some(KnownToken::DateNumeric { y: Some(p3), m: p1 as u8, d: p2 as u8 });
+                    return Some((KnownToken::DateNumeric { y: Some(p3), m: p1 as u8, d: p2 as u8 }, 0.9));
                 }
             }
             return None;
@@ -496,23 +437,30 @@ pub fn parse_date_numeric(s: &str, config: &ParseConfig) -> Option<KnownToken> {
 
         if p1 == 0 || p2 == 0 || p1 > 31 || p2 > 31 { return None; }
 
+        let mut score = 0.75;
+        if p1 <= 12 && p2 <= 12 {
+            score = 0.7;
+        }
+
         if config.day_first || p1 > 12 {
             if p2 <= 12 && p1 <= 31 {
-                return Some(KnownToken::DateNumeric { y: None, m: p2 as u8, d: p1 as u8 });
+                return Some((KnownToken::DateNumeric { y: None, m: p2 as u8, d: p1 as u8 }, score));
             }
         } else {
             if p1 <= 12 && p2 <= 31 {
-                return Some(KnownToken::DateNumeric { y: None, m: p1 as u8, d: p2 as u8 });
+                return Some((KnownToken::DateNumeric { y: None, m: p1 as u8, d: p2 as u8 }, score));
             }
         }
     }
     None
 }
-pub fn parse_time(s: &str) -> Option<KnownToken> {
+
+pub fn parse_time_scored(s: &str) -> Option<(KnownToken, f32)> {
     let lower = s.to_lowercase();
     let is_pm = lower.ends_with("pm") || lower.ends_with("p.m.");
     let is_am = lower.ends_with("am") || lower.ends_with("a.m.");
-    let cleaned = lower.trim_end_matches("pm").trim_end_matches("am").trim_end_matches("p.m.").trim_end_matches("a.m.").trim();
+    let is_oclock = lower.ends_with("oclock") || lower.ends_with("o'clock") || lower.ends_with("clock");
+    let cleaned = lower.trim_end_matches("pm").trim_end_matches("am").trim_end_matches("p.m.").trim_end_matches("a.m.").trim_end_matches("oclock").trim_end_matches("o'clock").trim_end_matches("clock").trim();
 
     if cleaned.len() == 4 && cleaned.chars().all(|c| c.is_ascii_digit()) {
         let hour = cleaned[0..2].parse::<u8>().ok()?;
@@ -521,7 +469,7 @@ pub fn parse_time(s: &str) -> Option<KnownToken> {
             let mut h = hour;
             if is_pm && h < 12 { h += 12; }
             if is_am && h == 12 { h = 0; }
-            return Some(KnownToken::Time { hour: h, min, sec: None, formatted: format!("{:02}:{:02}:00", h, min) });
+            return Some((KnownToken::Time { hour: h, min, sec: None, formatted: format!("{:02}:{:02}:00", h, min) }, 0.9));
         }
     }
 
@@ -534,14 +482,15 @@ pub fn parse_time(s: &str) -> Option<KnownToken> {
 
     if hour > 24 || min > 59 || sec.unwrap_or(0) > 59 { return None; }
     
-    // Heuristic: If it has a separator (e.g., "-") and no explicit am/pm, 
-    // it might be a date like "9-1" (Sept 1). 
-    // Usually, times have '00' or '30' or '15' or are >= 13, but "9-1" is ambiguous.
-    // Wait, the instructions said: "the 9-30 time doesnt resolve to a time. I think we need to be conditional about what we have, certainties, ie if we clearly have a date, a questionable entry might be more likely to be a time in an edge case."
-    // Actually, if we just parse "9-00" as time, it works. For "9-1", min is 1. We could let it parse as time, but is "9-1" a time? Usually 9:01 is written "9:01". "9-1" is almost certainly a date.
-    // Let's say if min < 10 and isn't padded with 0 (i.e. length is 1), and there's no am/pm, it's probably NOT a time unless the separator is `:`.
-    if !is_am && !is_pm && parts.len() == 2 && !s.contains(':') && !s.contains('.') && parts[1].len() != 2 {
+    let mut score = 0.8;
+    if !is_am && !is_pm && !is_oclock && parts.len() == 2 && !s.contains(':') && !s.contains('.') && parts[1].len() != 2 {
         return None;
+    } else if parts.len() == 1 && !is_pm && !is_am && !is_oclock {
+        score = 0.7; 
+    } else if parts.len() == 2 && s.contains(':') {
+        score = 0.95; 
+    } else if is_pm || is_am || is_oclock {
+        score = 0.95; 
     }
 
     if is_pm && hour < 12 { hour += 12; }
@@ -565,14 +514,14 @@ pub fn parse_time(s: &str) -> Option<KnownToken> {
         }
     };
 
-    Some(KnownToken::Time { hour, min, sec, formatted })
+    Some((KnownToken::Time { hour, min, sec, formatted }, score))
 }
 
-pub fn parse_iso(s: &str) -> Option<Vec<KnownToken>> {
+pub fn parse_iso(s: &str, config: &ParseConfig) -> Option<Vec<KnownToken>> {
     let lower = s.to_lowercase();
     if let Some((date_part, rest)) = lower.split_once('t') {
         let mut tokens = Vec::new();
-        if let Some(d) = parse_date_numeric(date_part, &ParseConfig { day_first: false, resolve_dates: false, mock_now: None }) {
+        if let Some((d, _)) = parse_date_numeric_scored(date_part, config) {
             tokens.push(d);
         } else {
             return None;
@@ -594,7 +543,7 @@ pub fn parse_iso(s: &str) -> Option<Vec<KnownToken>> {
             tz_part = None;
         }
 
-        if let Some(mut t) = parse_time(time_part) {
+        if let Some((mut t, _)) = parse_time_scored(time_part) {
             if let KnownToken::Time { formatted, .. } = &mut t {
                 *formatted = time_part.to_string(); // Keep exactly as ISO
             }
@@ -604,7 +553,7 @@ pub fn parse_iso(s: &str) -> Option<Vec<KnownToken>> {
         }
 
         if let Some(tz) = tz_part {
-            if let Some(tz_token) = parse_timezone(tz) {
+            if let Some((tz_token, _)) = parse_timezone_scored(tz) {
                 tokens.push(tz_token);
             }
         }
@@ -613,32 +562,32 @@ pub fn parse_iso(s: &str) -> Option<Vec<KnownToken>> {
     None
 }
 
-pub fn parse_timezone(s: &str) -> Option<KnownToken> {
+pub fn parse_timezone_scored(s: &str) -> Option<(KnownToken, f32)> {
     let lower = s.to_lowercase();
-    if lower == "z" { return Some(KnownToken::TimeZone(TimeZoneKind::Z)); }
-    if lower == "utc" || lower == "gmt" { return Some(KnownToken::TimeZone(TimeZoneKind::Utc)); }
+    if lower == "z" { return Some((KnownToken::TimeZone(TimeZoneKind::Z), 0.95)); }
+    if lower == "utc" || lower == "gmt" { return Some((KnownToken::TimeZone(TimeZoneKind::Utc), 0.95)); }
 
     if lower.starts_with("utc") || lower.starts_with("gmt") {
         let rest = &lower[3..];
-        return parse_offset(rest);
+        if let Some((tz, s)) = parse_offset(rest) { return Some((tz, s)); }
     }
     if lower.starts_with('+') || lower.starts_with('-') {
-        return parse_offset(&lower);
+        if let Some((tz, s)) = parse_offset(&lower) { return Some((tz, s)); }
     }
 
-    if lower.contains('/') {
-        return Some(KnownToken::TimeZone(TimeZoneKind::Named(s.to_string())));
+    if lower.contains('/') && !lower.chars().all(|c| c.is_ascii_digit() || c == '/') {
+        return Some((KnownToken::TimeZone(TimeZoneKind::Named(s.to_string())), 0.95));
     }
     
     let tz_abbrs = ["est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "cet", "cest", "eet", "eest", "bst", "jst", "ist", "aest", "aedt"];
     if tz_abbrs.contains(&lower.as_str()) {
-        return Some(KnownToken::TimeZone(TimeZoneKind::Named(s.to_uppercase())));
+        return Some((KnownToken::TimeZone(TimeZoneKind::Named(s.to_uppercase())), 0.95));
     }
 
     None
 }
 
-fn parse_offset(s: &str) -> Option<KnownToken> {
+fn parse_offset(s: &str) -> Option<(KnownToken, f32)> {
     let s = s.trim();
     if s.is_empty() { return None; }
     let sign = if s.starts_with('+') { 1 } else if s.starts_with('-') { -1 } else { return None; };
@@ -646,78 +595,344 @@ fn parse_offset(s: &str) -> Option<KnownToken> {
     
     let (h, m) = if rest.contains(':') {
         let parts: Vec<&str> = rest.split(':').collect();
-        let h = parts[0].parse::<i8>().ok()?;
-        let m = parts[1].parse::<i8>().ok()?;
+        let h = parts[0].parse::<i16>().ok()?;
+        let m = parts[1].parse::<i16>().ok()?;
         (h, m)
     } else if rest.len() == 4 {
-        let h = rest[0..2].parse::<i8>().ok()?;
-        let m = rest[2..4].parse::<i8>().ok()?;
+        let h = rest[0..2].parse::<i16>().ok()?;
+        let m = rest[2..4].parse::<i16>().ok()?;
         (h, m)
     } else {
-        let h = rest.parse::<i8>().ok()?;
+        let h = rest.parse::<i16>().ok()?;
         (h, 0)
     };
 
-    Some(KnownToken::TimeZone(TimeZoneKind::Offset { hours: h * sign, minutes: m * sign }))
+    let minutes_total = (h * 60 + m) * sign;
+    Some((KnownToken::TimeZone(TimeZoneKind::Offset { minutes_total }), 0.95))
 }
 
-pub fn classify(raw: Vec<RawToken>, config: &ParseConfig) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    for r in raw {
-        let s = r.as_str();
+fn evaluate_token(s: &str, config: &ParseConfig) -> Vec<ScoredToken> {
+    let mut candidates = Vec::new();
 
-        if let Some(k) = lookup_dict(s) {
-            tokens.push(Token::Known(k));
+    if let Some((t, score)) = parse_time_scored(s) {
+        candidates.push(ScoredToken { token: t, score });
+    }
+
+    if let Some((d, score)) = parse_date_numeric_scored(s, config) {
+        candidates.push(ScoredToken { token: d, score });
+    }
+
+    if let Some((tz, score)) = parse_timezone_scored(s) {
+        candidates.push(ScoredToken { token: tz, score });
+    }
+
+    if let Ok(n) = s.parse::<i32>() {
+        candidates.push(ScoredToken { token: KnownToken::Number(n), score: 0.9 });
+    }
+
+    let dict = get_dict();
+    let lower = s.to_lowercase();
+    let mut best_fuzzy = None;
+    let mut best_fuzzy_score = 0.0;
+
+    for &(word, ref known) in dict.iter() {
+        if lower == word {
+            let mut score = 1.0;
+            if matches!(known, KnownToken::Time { .. }) {
+                score = 0.9; 
+            }
+            candidates.push(ScoredToken { token: known.clone(), score });
+        } else {
+            if lower.len() > 2 && word.len() > 2 && !lower.chars().all(|c| c.is_ascii_digit()) {
+                let len_diff = (lower.len() as i32 - word.len() as i32).abs();
+                if len_diff <= 2 {
+                    let dist = levenshtein(&lower, word) as f32;
+                    let max_len = lower.len().max(word.len()) as f32;
+                    let mut score = 1.0 - (dist / max_len);
+
+                    if word.starts_with(&lower) { score += 0.1; }
+                    if word.chars().next() == lower.chars().next() { score += 0.05; }
+                    
+                    score = score.clamp(0.0, 0.95);
+
+                    if score > best_fuzzy_score {
+                        best_fuzzy_score = score;
+                        best_fuzzy = Some(known.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    if best_fuzzy_score >= 0.65 {
+        if let Some(tok) = best_fuzzy {
+            if !candidates.iter().any(|c| c.token == tok) {
+                candidates.push(ScoredToken { token: tok, score: best_fuzzy_score });
+            }
+        }
+    }
+
+    candidates.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+    candidates
+}
+
+pub fn apply_context_boosts(tokens: &mut Vec<Token>, debug: bool) {
+    let len = tokens.len();
+    if len < 2 { return; }
+
+    for i in 0..len {
+        let mut boost = 0.0;
+
+        if let Token::Known(ref st) = tokens[i] {
+            match st.token {
+                KnownToken::Time { .. } => {
+                    if i > 0 {
+                        if let Token::Known(ref prev) = tokens[i-1] {
+                            if matches!(prev.token, KnownToken::DateNumeric { .. } | KnownToken::TimeZone(_)) { boost += 0.1; }
+                        }
+                    }
+                    if i + 1 < len {
+                        if let Token::Known(ref next) = tokens[i+1] {
+                            if matches!(next.token, KnownToken::DateNumeric { .. } | KnownToken::TimeZone(_)) { boost += 0.1; }
+                        }
+                    }
+                },
+                KnownToken::TimeZone(_) | KnownToken::DateNumeric { .. } => {
+                    if i > 0 {
+                        if let Token::Known(ref prev) = tokens[i-1] {
+                            if matches!(prev.token, KnownToken::Time { .. }) { boost += 0.1; }
+                        }
+                    }
+                    if i + 1 < len {
+                        if let Token::Known(ref next) = tokens[i+1] {
+                            if matches!(next.token, KnownToken::Time { .. }) { boost += 0.1; }
+                        }
+                    }
+                },
+                _ => {}
+            }
+        }
+        
+        if boost > 0.0 {
+            if let Token::Known(ref mut st) = tokens[i] {
+                st.score = (st.score + boost).min(1.0);
+                if debug {
+                    println!("DEBUG: Context Boosted {:?} by {}", st.token, boost);
+                }
+            }
+        }
+    }
+    
+    // Modifier -> Weekday
+    for i in 0..len {
+        let mut prev_is_modifier = false;
+        if i > 0 {
+            if let Token::Known(ref st) = tokens[i-1] {
+                if matches!(st.token, KnownToken::Modifier(_)) {
+                    prev_is_modifier = true;
+                }
+            }
+        }
+        if prev_is_modifier {
+            if let Token::Unknown { ref mut candidates, .. } = tokens[i] {
+                for c in candidates.iter_mut() {
+                    if matches!(c.token, KnownToken::Weekday(_)) {
+                        c.score = (c.score + 0.2).min(1.0);
+                        if debug { println!("DEBUG: Boosted Weekday candidate to {}", c.score); }
+                    }
+                }
+                candidates.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+            }
+        }
+    }
+    
+    // Unknown + Time -> RelativeDay
+    for i in 0..len {
+        let mut has_time_neighbor = false;
+        if i > 0 {
+            if let Token::Known(ref st) = tokens[i-1] {
+                if matches!(st.token, KnownToken::Time { .. }) { has_time_neighbor = true; }
+            }
+        }
+        if i + 1 < len {
+            if let Token::Known(ref st) = tokens[i+1] {
+                if matches!(st.token, KnownToken::Time { .. }) { has_time_neighbor = true; }
+            }
+        }
+        if has_time_neighbor {
+            if let Token::Unknown { ref mut candidates, .. } = tokens[i] {
+                for c in candidates.iter_mut() {
+                    if matches!(c.token, KnownToken::RelativeDay(_)) {
+                        c.score = (c.score + 0.15).min(1.0);
+                        if debug { println!("DEBUG: Boosted RelativeDay candidate to {}", c.score); }
+                    }
+                }
+                candidates.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+            }
+        }
+    }
+    
+    // Number + Unit boost
+    for i in 0..len-1 {
+        let mut is_num = false;
+        let mut is_unit = false;
+        if let Token::Known(ref st1) = tokens[i] {
+            if matches!(st1.token, KnownToken::Number(_)) { is_num = true; }
+        }
+        if let Token::Known(ref st2) = tokens[i+1] {
+            if matches!(st2.token, KnownToken::Unit(_)) { is_unit = true; }
+        }
+        if is_num && is_unit {
+            if let Token::Known(ref mut st1) = tokens[i] {
+                st1.score = (st1.score + 0.2).min(1.0);
+            }
+            if let Token::Known(ref mut st2) = tokens[i+1] {
+                st2.score = (st2.score + 0.2).min(1.0);
+            }
+            if debug { println!("DEBUG: Boosted Number+Unit pair"); }
+        }
+    }
+    
+    // At + Number -> Time boost
+    for i in 0..len-1 {
+        let mut has_at = false;
+        if let Token::Known(ref st) = tokens[i] {
+            if matches!(st.token, KnownToken::At) { has_at = true; }
+        }
+        if has_at {
+            if let Token::Known(ref mut st_next) = tokens[i+1] {
+                if let KnownToken::Number(n) = st_next.token {
+                    if n > 0 && n <= 24 {
+                        let mut h = n as u8;
+                        if h <= 12 {
+                            h += 12;
+                            if h == 24 { h = 0; }
+                        }
+                        st_next.token = KnownToken::Time {
+                            hour: h,
+                            min: 0,
+                            sec: None,
+                            formatted: format!("{:02}:00:00", h)
+                        };
+                        st_next.score = 0.95;
+                        if debug { println!("DEBUG: Converted At + Number to Time"); }
+                    }
+                }
+            }
+        }
+    }
+    
+    for i in 0..len {
+        if let Token::Unknown { candidates, .. } = &tokens[i] {
+            if let Some(best) = candidates.first() {
+                if best.score >= 0.65 {
+                    let best_clone = best.clone();
+                    tokens[i] = Token::Known(best_clone);
+                }
+            }
+        }
+    }
+}
+
+pub fn tokenize_and_classify(input: &str, config: &ParseConfig) -> Vec<Token> {
+    let norm = normalize(input);
+    let raw = tokenize(&norm);
+    
+    let mut i = 0;
+    let mut tokens = Vec::new();
+    
+    while i < raw.len() {
+        let s1 = raw[i].as_str();
+        
+        if s1 == "the" || s1 == "a" || s1 == "coming" || s1 == "after" || s1 == "of" {
+            tokens.push(Token::Noise(s1.to_string()));
+            i += 1;
             continue;
         }
 
-        if s.contains('t') && (s.contains('-') || s.contains('z') || s.contains('+') || s.len() > 10) {
-            if let Some(iso_tokens) = parse_iso(s) {
-                for it in iso_tokens {
-                    tokens.push(Token::Known(it));
+        if s1.contains('t') && (s1.contains('-') || s1.contains('z') || s1.contains('+') || s1.len() > 10) {
+            if let Some(iso_tokens) = parse_iso(s1, config) {
+                for t in iso_tokens {
+                    tokens.push(Token::Known(ScoredToken { token: t, score: 1.0 }));
                 }
+                i += 1;
                 continue;
             }
         }
 
-        if let Some(t) = parse_time(s) {
-            tokens.push(Token::Known(t));
-            continue;
-        }
+        let cands1 = evaluate_token(s1, config);
+        let score1 = cands1.first().map(|c| c.score).unwrap_or(0.0);
 
-        if let Some(d) = parse_date_numeric(s, config) {
-            tokens.push(Token::Known(d));
-            continue;
-        }
-
-        if let Some(tz) = parse_timezone(s) {
-            tokens.push(Token::Known(tz));
-            continue;
-        }
-
-        if let Ok(n) = s.parse::<i32>() {
-            if s.len() == 4 {
-                if let Some(t) = parse_time(s) {
-                    tokens.push(Token::Known(t));
-                    continue;
+        if i + 1 < raw.len() {
+            let s2 = raw[i+1].as_str();
+            
+            let cands2 = evaluate_token(s2, config);
+            let score2 = cands2.first().map(|c| c.score).unwrap_or(0.0);
+            
+            let score_original = (score1 + score2) / 2.0;
+            
+            let combined_direct = format!("{}{}", s1, s2);
+            let cands_comb_dir = evaluate_token(&combined_direct, config);
+            let score_dir = cands_comb_dir.first().map(|c| c.score).unwrap_or(0.0);
+            
+            let combined_space = format!("{} {}", s1, s2);
+            let cands_comb_spc = evaluate_token(&combined_space, config);
+            let score_spc = cands_comb_spc.first().map(|c| c.score).unwrap_or(0.0);
+            
+            let best_comb_score = score_dir.max(score_spc);
+            let best_cands = if score_dir > score_spc { cands_comb_dir } else { cands_comb_spc };
+            
+            if best_comb_score > score_original + 0.15 && best_comb_score >= 0.8 {
+                if config.debug {
+                    println!("DEBUG: Recombined '{}' and '{}' -> score {}", s1, s2, best_comb_score);
+                }
+                tokens.push(Token::Known(best_cands[0].clone()));
+                i += 2;
+                continue;
+            }
+            
+            if let (Ok(h), Ok(m)) = (s1.parse::<u8>(), s2.parse::<u8>()) {
+                if h < 24 && m < 60 && s2.len() == 2 {
+                    let combined_time = format!("{:02}:{:02}", h, m);
+                    if let Some((t, score)) = parse_time_scored(&combined_time) {
+                        if config.debug {
+                            println!("DEBUG: Recombined adjacent numbers '{}' and '{}' into time", s1, s2);
+                        }
+                        tokens.push(Token::Known(ScoredToken { token: t, score }));
+                        i += 2;
+                        continue;
+                    }
                 }
             }
-            tokens.push(Token::Known(KnownToken::Number(n)));
-            continue;
         }
-
-        if let Some((k, _score)) = fuzzy_match(s) {
-            tokens.push(Token::Known(k));
-            continue;
-        }
-
-        if s == "the" || s == "a" || s == "coming" || s == "after" || s == "of" || s == "oclock" || s == "clock" {
-            tokens.push(Token::Noise(s.to_string()));
+        
+        if cands1.is_empty() {
+            tokens.push(Token::Unknown { word: s1.to_string(), candidates: vec![] });
+        } else if cands1.len() == 1 {
+            if cands1[0].score >= 0.65 {
+                tokens.push(Token::Known(cands1[0].clone()));
+            } else {
+                tokens.push(Token::Unknown { word: s1.to_string(), candidates: cands1 });
+            }
         } else {
-            tokens.push(Token::Unknown(UnknownToken::Word(s.to_string())));
+            let best = &cands1[0];
+            let second = &cands1[1];
+            if best.score >= 0.65 && (best.score - second.score >= 0.1) {
+                tokens.push(Token::Known(best.clone()));
+            } else {
+                tokens.push(Token::Unknown { word: s1.to_string(), candidates: cands1 });
+            }
         }
+        i += 1;
     }
-    tokens
+
+    apply_context_boosts(&mut tokens, config.debug);
+    
+    if config.resolve_dates {
+        resolve(tokens, config)
+    } else {
+        tokens
+    }
 }
 
 fn nth_weekday_of_month(year: i32, month: u32, weekday: chrono::Weekday, n: u8) -> NaiveDate {
@@ -775,101 +990,134 @@ pub fn resolve(tokens: Vec<Token>, config: &ParseConfig) -> Vec<Token> {
     let now = config.mock_now.unwrap_or_else(|| Local::now().date_naive());
     let mut resolved = Vec::new();
     let mut current_modifier = None;
+    let mut current_modifier_score = 0.0;
 
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
-            Token::Known(KnownToken::Modifier(m)) => {
-                current_modifier = Some(m.clone());
-            }
-            Token::Known(KnownToken::RelativeDay(r)) => {
-                let d = match r {
-                    RelativeDay::Today => now,
-                    RelativeDay::Tomorrow => now + Duration::days(1),
-                    RelativeDay::Yesterday => now - Duration::days(1),
-                };
-                resolved.push(Token::Known(KnownToken::DateNumeric { 
-                    y: Some(d.year()), 
-                    m: d.month() as u8, 
-                    d: d.day() as u8 
-                }));
-                current_modifier = None;
-            }
-            Token::Known(KnownToken::Weekday(w)) => {
-                let target_wd = match w {
-                    Weekday::Monday => chrono::Weekday::Mon,
-                    Weekday::Tuesday => chrono::Weekday::Tue,
-                    Weekday::Wednesday => chrono::Weekday::Wed,
-                    Weekday::Thursday => chrono::Weekday::Thu,
-                    Weekday::Friday => chrono::Weekday::Fri,
-                    Weekday::Saturday => chrono::Weekday::Sat,
-                    Weekday::Sunday => chrono::Weekday::Sun,
-                };
-                
-                let mut days_ahead = target_wd.num_days_from_monday() as i64 - now.weekday().num_days_from_monday() as i64;
-                if days_ahead <= 0 {
-                    days_ahead += 7;
-                }
-                
-                if let Some(Modifier::Next) = current_modifier {
-                    days_ahead += 7;
-                } else if let Some(Modifier::Last) = current_modifier {
-                    days_ahead -= 14; 
-                    if days_ahead < -7 { days_ahead += 7; } 
-                }
-                
-                if i + 1 < tokens.len() {
-                    if let Token::Known(KnownToken::Unit(Unit::Week)) = &tokens[i+1] {
-                        days_ahead += 7;
-                        i += 1;
+            Token::Known(st) => {
+                match st.token {
+                    KnownToken::Modifier(ref m) => {
+                        current_modifier = Some(m.clone());
+                        current_modifier_score = st.score;
+                    }
+                    KnownToken::RelativeDay(ref r) => {
+                        let d = match r {
+                            RelativeDay::Today => now,
+                            RelativeDay::Tomorrow => now + Duration::days(1),
+                            RelativeDay::Yesterday => now - Duration::days(1),
+                        };
+                        resolved.push(Token::Known(ScoredToken {
+                            token: KnownToken::DateNumeric { 
+                                y: Some(d.year()), 
+                                m: d.month() as u8, 
+                                d: d.day() as u8 
+                            },
+                            score: st.score
+                        }));
+                        current_modifier = None;
+                    }
+                    KnownToken::Weekday(ref w) => {
+                        let target_wd = match w {
+                            Weekday::Monday => chrono::Weekday::Mon,
+                            Weekday::Tuesday => chrono::Weekday::Tue,
+                            Weekday::Wednesday => chrono::Weekday::Wed,
+                            Weekday::Thursday => chrono::Weekday::Thu,
+                            Weekday::Friday => chrono::Weekday::Fri,
+                            Weekday::Saturday => chrono::Weekday::Sat,
+                            Weekday::Sunday => chrono::Weekday::Sun,
+                        };
+                        
+                        let mut days_ahead = target_wd.num_days_from_monday() as i64 - now.weekday().num_days_from_monday() as i64;
+                        if days_ahead <= 0 { days_ahead += 7; }
+                        
+                        if let Some(Modifier::Next) = current_modifier {
+                            days_ahead += 7;
+                        } else if let Some(Modifier::Last) = current_modifier {
+                            days_ahead -= 14; 
+                            if days_ahead < -7 { days_ahead += 7; } 
+                        }
+                        
+                        if i + 1 < tokens.len() {
+                            if let Token::Known(st_next) = &tokens[i+1] {
+                                if let KnownToken::Unit(Unit::Week) = st_next.token {
+                                    days_ahead += 7;
+                                    i += 1;
+                                }
+                            }
+                        }
+                        
+                        let d = now + Duration::days(days_ahead);
+                        resolved.push(Token::Known(ScoredToken {
+                            token: KnownToken::DateNumeric { 
+                                y: Some(d.year()), 
+                                m: d.month() as u8, 
+                                d: d.day() as u8 
+                            },
+                            score: st.score
+                        }));
+                        current_modifier = None;
+                    }
+                    KnownToken::Holiday(ref h) => {
+                        let current_year = now.year();
+                        let mut h_date = resolve_holiday(h, current_year);
+                        if h_date < now {
+                            h_date = resolve_holiday(h, current_year + 1);
+                        }
+                        resolved.push(Token::Known(ScoredToken {
+                            token: KnownToken::DateNumeric { 
+                                y: Some(h_date.year()), 
+                                m: h_date.month() as u8, 
+                                d: h_date.day() as u8 
+                            },
+                            score: st.score
+                        }));
+                        current_modifier = None;
+                    }
+                    KnownToken::DateNumeric { y, m, d } => {
+                        let yr = y;
+                        let mo = m;
+                        let da = d;
+                        if let Some(modi) = current_modifier.take() {
+                            resolved.push(Token::Known(ScoredToken {
+                                token: KnownToken::Modifier(modi),
+                                score: current_modifier_score
+                            }));
+                        }
+                        let mut final_year = yr.unwrap_or(now.year());
+                        if yr.is_none() {
+                            let target_date = NaiveDate::from_ymd_opt(now.year(), mo as u32, da as u32).unwrap_or(now);
+                            if target_date < now {
+                                final_year = now.year() + 1;
+                            }
+                        }
+                        
+                        resolved.push(Token::Known(ScoredToken {
+                            token: KnownToken::DateNumeric { 
+                                y: Some(final_year), 
+                                m: mo, 
+                                d: da 
+                            },
+                            score: st.score
+                        }));
+                    }
+                    _ => {
+                        if let Some(modi) = current_modifier.take() {
+                            resolved.push(Token::Known(ScoredToken {
+                                token: KnownToken::Modifier(modi),
+                                score: current_modifier_score
+                            }));
+                        }
+                        resolved.push(Token::Known(st.clone()));
                     }
                 }
-                
-                let d = now + Duration::days(days_ahead);
-                resolved.push(Token::Known(KnownToken::DateNumeric { 
-                    y: Some(d.year()), 
-                    m: d.month() as u8, 
-                    d: d.day() as u8 
-                }));
-                current_modifier = None;
-            }
-            Token::Known(KnownToken::Holiday(h)) => {
-                let current_year = now.year();
-                let mut h_date = resolve_holiday(h, current_year);
-                if h_date < now {
-                    h_date = resolve_holiday(h, current_year + 1);
-                }
-                resolved.push(Token::Known(KnownToken::DateNumeric { 
-                    y: Some(h_date.year()), 
-                    m: h_date.month() as u8, 
-                    d: h_date.day() as u8 
-                }));
-                current_modifier = None;
-            }
-            Token::Known(KnownToken::DateNumeric { y, m, d }) => {
-                let yr = *y;
-                let mo = *m;
-                let da = *d;
-                if let Some(modi) = current_modifier.take() {
-                    resolved.push(Token::Known(KnownToken::Modifier(modi)));
-                }
-                let mut final_year = yr.unwrap_or(now.year());
-                if yr.is_none() {
-                    let target_date = NaiveDate::from_ymd_opt(now.year(), mo as u32, da as u32).unwrap_or(now);
-                    if target_date < now {
-                        final_year = now.year() + 1;
-                    }
-                }
-                
-                resolved.push(Token::Known(KnownToken::DateNumeric { 
-                    y: Some(final_year), 
-                    m: mo, 
-                    d: da 
-                }));
             }
             other => {
-                if let Some(m) = current_modifier.take() {
-                    resolved.push(Token::Known(KnownToken::Modifier(m)));
+                if let Some(modi) = current_modifier.take() {
+                    resolved.push(Token::Known(ScoredToken {
+                        token: KnownToken::Modifier(modi),
+                        score: current_modifier_score
+                    }));
                 }
                 resolved.push(other.clone());
             }
@@ -877,8 +1125,11 @@ pub fn resolve(tokens: Vec<Token>, config: &ParseConfig) -> Vec<Token> {
         i += 1;
     }
     
-    if let Some(m) = current_modifier {
-        resolved.push(Token::Known(KnownToken::Modifier(m)));
+    if let Some(modi) = current_modifier {
+        resolved.push(Token::Known(ScoredToken {
+            token: KnownToken::Modifier(modi),
+            score: current_modifier_score
+        }));
     }
     
     resolved
@@ -886,64 +1137,92 @@ pub fn resolve(tokens: Vec<Token>, config: &ParseConfig) -> Vec<Token> {
 
 pub fn to_canonical(mut tokens: Vec<Token>) -> String {
     tokens.retain(|t| !matches!(t, Token::Noise(_)));
-    tokens.retain(|t| !matches!(t, Token::Unknown(_)));
+    tokens.retain(|t| !matches!(t, Token::Unknown{..}));
 
     let mut modifier = None;
     let mut date_str = None;
     let mut time_str = None;
     let mut tz_str = None;
+    
+    let mut modifier_score = 0.0;
+    let mut date_score = 0.0;
+    let mut time_score = 0.0;
+    let mut tz_score = 0.0;
 
     for t in tokens {
-        if let Token::Known(k) = t {
-            match k {
-                KnownToken::Modifier(m) => {
-                    modifier = Some(match m {
-                        Modifier::Next => "next",
-                        Modifier::Last => "last",
-                        Modifier::This => "this",
-                    });
-                }
-                KnownToken::RelativeDay(r) => {
-                    date_str = Some(match r {
-                        RelativeDay::Today => "today".to_string(),
-                        RelativeDay::Tomorrow => "tomorrow".to_string(),
-                        RelativeDay::Yesterday => "yesterday".to_string(),
-                    });
-                }
-                KnownToken::Weekday(w) => {
-                    date_str = Some(match w {
-                        Weekday::Monday => "monday".to_string(),
-                        Weekday::Tuesday => "tuesday".to_string(),
-                        Weekday::Wednesday => "wednesday".to_string(),
-                        Weekday::Thursday => "thursday".to_string(),
-                        Weekday::Friday => "friday".to_string(),
-                        Weekday::Saturday => "saturday".to_string(),
-                        Weekday::Sunday => "sunday".to_string(),
-                    });
-                }
-                KnownToken::DateNumeric { y, m, d } => {
-                    if let Some(year) = y {
-                        date_str = Some(format!("{:04}-{:02}-{:02}", year, m, d));
-                    } else {
-                        date_str = Some(format!("{:02}-{:02}", m, d));
+        if let Token::Known(st) = t {
+            let score = st.score;
+            match st.token {
+                KnownToken::Modifier(ref m) => {
+                    if score >= modifier_score {
+                        modifier = Some(match m {
+                            Modifier::Next => "next",
+                            Modifier::Last => "last",
+                            Modifier::This => "this",
+                        });
+                        modifier_score = score;
                     }
                 }
-                KnownToken::Time { formatted, .. } => {
-                    time_str = Some(formatted);
+                KnownToken::RelativeDay(ref r) => {
+                    if score >= date_score {
+                        date_str = Some(match r {
+                            RelativeDay::Today => "today".to_string(),
+                            RelativeDay::Tomorrow => "tomorrow".to_string(),
+                            RelativeDay::Yesterday => "yesterday".to_string(),
+                        });
+                        date_score = score;
+                    }
                 }
-                KnownToken::TimeZone(tz) => {
-                    tz_str = Some(match tz {
-                        TimeZoneKind::Z => "UTC".to_string(),
-                        TimeZoneKind::Utc => "UTC".to_string(),
-                        TimeZoneKind::Offset { hours, minutes } => {
-                            if minutes == 0 {
-                                format!("UTC{:+}", hours)
-                            } else {
-                                format!("UTC{:+}:{:02}", hours, minutes)
-                            }
+                KnownToken::Weekday(ref w) => {
+                    if score >= date_score {
+                        date_str = Some(match w {
+                            Weekday::Monday => "monday".to_string(),
+                            Weekday::Tuesday => "tuesday".to_string(),
+                            Weekday::Wednesday => "wednesday".to_string(),
+                            Weekday::Thursday => "thursday".to_string(),
+                            Weekday::Friday => "friday".to_string(),
+                            Weekday::Saturday => "saturday".to_string(),
+                            Weekday::Sunday => "sunday".to_string(),
+                        });
+                        date_score = score;
+                    }
+                }
+                KnownToken::DateNumeric { y, m, d } => {
+                    if score >= date_score {
+                        if let Some(year) = y {
+                            date_str = Some(format!("{:04}-{:02}-{:02}", year, m, d));
+                        } else {
+                            date_str = Some(format!("{:02}-{:02}", m, d));
                         }
-                        TimeZoneKind::Named(n) => n.clone(),
-                    });
+                        date_score = score;
+                    }
+                }
+                KnownToken::Time { ref formatted, .. } => {
+                    if score >= time_score {
+                        time_str = Some(formatted.clone());
+                        time_score = score;
+                    }
+                }
+                KnownToken::TimeZone(ref tz) => {
+                    if score >= tz_score {
+                        tz_str = Some(match tz {
+                            TimeZoneKind::Z => "UTC".to_string(),
+                            TimeZoneKind::Utc => "UTC".to_string(),
+                            TimeZoneKind::Offset { minutes_total } => {
+                                let sign = if *minutes_total < 0 { "-" } else { "+" };
+                                let abs_min = minutes_total.abs();
+                                let h = abs_min / 60;
+                                let m = abs_min % 60;
+                                if m == 0 {
+                                    format!("UTC{}{:02}", sign, h)
+                                } else {
+                                    format!("UTC{}{:02}:{:02}", sign, h, m)
+                                }
+                            }
+                            TimeZoneKind::Named(n) => n.clone(),
+                        });
+                        tz_score = score;
+                    }
                 }
                 _ => {}
             }
@@ -952,7 +1231,7 @@ pub fn to_canonical(mut tokens: Vec<Token>) -> String {
 
     let mut parts = Vec::new();
     if let Some(m) = modifier {
-        if let Some(d) = date_str {
+        if let Some(d) = &date_str {
             parts.push(format!("{} {}", m, d));
         } else {
             parts.push(m.to_string());
@@ -972,24 +1251,7 @@ pub fn to_canonical(mut tokens: Vec<Token>) -> String {
         parts.push(tz.clone());
     }
 
-    let joined = parts.join(" ");
-    
-    if joined.contains("at") && tz_str.is_some() && joined.matches('-').count() >= 2 && joined.matches(':').count() >= 2 {
-    }
-
-    joined
-}
-
-pub fn tokenize_and_classify(input: &str, config: &ParseConfig) -> Vec<Token> {
-    let norm = normalize(input);
-    let raw = tokenize(&norm);
-    let recombined = recombine(raw);
-    let classified = classify(recombined, config);
-    if config.resolve_dates {
-        resolve(classified, config)
-    } else {
-        classified
-    }
+    parts.join(" ")
 }
 
 pub fn format_custom(tokens: &[Token], template: &str) -> String {
@@ -1001,51 +1263,76 @@ pub fn format_custom(tokens: &[Token], template: &str) -> String {
     let mut s = None;
     let mut tz = None;
     let mut rel = None;
+    
+    let mut date_score = 0.0;
+    let mut time_score = 0.0;
+    let mut tz_score = 0.0;
+    let mut rel_score = 0.0;
 
     for t in tokens {
-        if let Token::Known(k) = t {
-            match k {
+        if let Token::Known(st) = t {
+            let score = st.score;
+            match st.token {
                 KnownToken::DateNumeric { y: year, m: month, d: day } => {
-                    y = *year;
-                    m = Some(*month);
-                    d = Some(*day);
+                    if score >= date_score {
+                        y = year;
+                        m = Some(month);
+                        d = Some(day);
+                        date_score = score;
+                    }
                 }
                 KnownToken::Time { hour, min: minute, sec, .. } => {
-                    h = Some(*hour);
-                    min = Some(*minute);
-                    s = *sec;
+                    if score >= time_score {
+                        h = Some(hour);
+                        min = Some(minute);
+                        s = sec;
+                        time_score = score;
+                    }
                 }
-                KnownToken::TimeZone(tz_kind) => {
-                    tz = Some(match tz_kind {
-                        TimeZoneKind::Z => "UTC".to_string(),
-                        TimeZoneKind::Utc => "UTC".to_string(),
-                        TimeZoneKind::Offset { hours, minutes } => {
-                            if *minutes == 0 {
-                                format!("UTC{:+}", hours)
-                            } else {
-                                format!("UTC{:+}:{:02}", hours, minutes)
+                KnownToken::TimeZone(ref tz_kind) => {
+                    if score >= tz_score {
+                        tz = Some(match tz_kind {
+                            TimeZoneKind::Z => "UTC".to_string(),
+                            TimeZoneKind::Utc => "UTC".to_string(),
+                            TimeZoneKind::Offset { minutes_total } => {
+                                let sign = if *minutes_total < 0 { "-" } else { "+" };
+                                let abs_min = minutes_total.abs();
+                                let hr = abs_min / 60;
+                                let mr = abs_min % 60;
+                                if mr == 0 {
+                                    format!("UTC{}{:02}", sign, hr)
+                                } else {
+                                    format!("UTC{}{:02}:{:02}", sign, hr, mr)
+                                }
                             }
-                        }
-                        TimeZoneKind::Named(n) => n.clone(),
-                    });
+                            TimeZoneKind::Named(n) => n.clone(),
+                        });
+                        tz_score = score;
+                    }
                 }
-                KnownToken::RelativeDay(r) => {
-                    rel = Some(match r {
-                        RelativeDay::Today => "today",
-                        RelativeDay::Tomorrow => "tomorrow",
-                        RelativeDay::Yesterday => "yesterday",
-                    });
+                KnownToken::RelativeDay(ref r) => {
+                    if score >= rel_score {
+                        rel = Some(match r {
+                            RelativeDay::Today => "today",
+                            RelativeDay::Tomorrow => "tomorrow",
+                            RelativeDay::Yesterday => "yesterday",
+                        });
+                        rel_score = score;
+                    }
                 }
-                KnownToken::Weekday(w) => {
-                    rel = Some(match w {
-                        Weekday::Monday => "monday",
-                        Weekday::Tuesday => "tuesday",
-                        Weekday::Wednesday => "wednesday",
-                        Weekday::Thursday => "thursday",
-                        Weekday::Friday => "friday",
-                        Weekday::Saturday => "saturday",
-                        Weekday::Sunday => "sunday",
-                    });
+                KnownToken::Weekday(ref w) => {
+                    if score >= rel_score {
+                        rel = Some(match w {
+                            Weekday::Monday => "monday",
+                            Weekday::Tuesday => "tuesday",
+                            Weekday::Wednesday => "wednesday",
+                            Weekday::Thursday => "thursday",
+                            Weekday::Friday => "friday",
+                            Weekday::Saturday => "saturday",
+                            Weekday::Sunday => "sunday",
+                        });
+                        rel_score = score;
+                    }
                 }
                 _ => {}
             }
@@ -1131,6 +1418,7 @@ mod tests {
             day_first: false,
             resolve_dates: true,
             mock_now: Some(mock_date),
+            debug: false,
         };
 
         for case in suite.cases {

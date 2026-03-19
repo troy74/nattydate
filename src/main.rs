@@ -9,7 +9,10 @@ struct Args {
 
     /// Assume day comes first in ambiguous numeric dates (DD/MM/YYYY vs MM/DD/YYYY)
     #[arg(short, long)]
-    day_first: bool,
+    pub day_first: bool,
+
+    #[arg(long)]
+    pub debug: bool,
 
     /// Output format
     #[arg(short, long, value_enum, default_value_t = OutputFormat::Canonical)]
@@ -50,7 +53,7 @@ fn main() {
         return;
     }
 
-    let config = ParseConfig { day_first: args.day_first, resolve_dates: true, mock_now: None };
+    let config = ParseConfig { day_first: args.day_first, resolve_dates: true, mock_now: None, debug: args.debug };
 
     let tokens = nattydate::tokenize_and_classify(&args.text, &config);
 
