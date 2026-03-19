@@ -18,6 +18,10 @@ struct Args {
     #[arg(short, long)]
     pub verbose: bool,
 
+    /// Optional path to a custom tests.json file for the test suite
+    #[arg(long)]
+    pub test_file: Option<String>,
+
     /// Output format
     #[arg(short, long, value_enum, default_value_t = OutputFormat::Canonical)]
     output_format: OutputFormat,
@@ -51,9 +55,13 @@ struct TestCase {
     format: String,
 }
 
-fn run_test_suite(verbose: bool) {
-    let json_str = include_str!("../tests.json");
-    let suite: TestSuite = serde_json::from_str(json_str).expect("Failed to parse tests.json");
+fn run_test_suite(verbose: bool, file_path: Option<String>) {
+    let json_str = match file_path {
+        Some(path) => std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read custom test file: {}", path)),
+        None => include_str!("../tests.json").to_string(),
+    };
+    
+    let suite: TestSuite = serde_json::from_str(&json_str).expect("Failed to parse JSON");
     let mock_date = chrono::NaiveDate::parse_from_str(&suite.mock_now, "%Y-%m-%d").unwrap();
     
     let config = ParseConfig {
@@ -103,7 +111,7 @@ fn main() {
     let args = Args::parse();
     
     if args.text.trim().to_lowercase() == "test" {
-        run_test_suite(args.verbose);
+        run_test_suite(args.verbose, args.test_file);
         return;
     }
 
