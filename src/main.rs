@@ -1,5 +1,5 @@
 use clap::{Parser, ValueEnum};
-use nattydate::{ParseConfig};
+use nattydate::ParseConfig;
 use serde::Deserialize;
 
 #[derive(Parser, Debug)]
@@ -14,7 +14,7 @@ struct Args {
 
     #[arg(long)]
     pub debug: bool,
-    
+
     #[arg(short, long)]
     pub verbose: bool,
 
@@ -55,13 +55,14 @@ struct TestCase {
 
 fn run_test_suite(verbose: bool, file_path: Option<String>) {
     let json_str = match file_path {
-        Some(path) => std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read custom test file: {}", path)),
+        Some(path) => std::fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("Failed to read custom test file: {}", path)),
         None => include_str!("../tests.json").to_string(),
     };
-    
+
     let suite: TestSuite = serde_json::from_str(&json_str).expect("Failed to parse JSON");
     let mock_date = chrono::NaiveDate::parse_from_str(&suite.mock_now, "%Y-%m-%d").unwrap();
-    
+
     let config = ParseConfig {
         day_first: false,
         resolve_dates: true,
@@ -69,7 +70,11 @@ fn run_test_suite(verbose: bool, file_path: Option<String>) {
         debug: false,
     };
 
-    println!("Running {} integrated tests (Mock Time: {})...", suite.cases.len(), suite.mock_now);
+    println!(
+        "Running {} integrated tests (Mock Time: {})...",
+        suite.cases.len(),
+        suite.mock_now
+    );
     if !verbose {
         println!("(Use --verbose to see individual test outputs)\n");
     }
@@ -79,13 +84,20 @@ fn run_test_suite(verbose: bool, file_path: Option<String>) {
 
     for (i, case) in suite.cases.iter().enumerate() {
         let tokens = nattydate::tokenize_and_classify(&case.input, &config);
-        let output = nattydate::format_custom(&tokens, &case.format).trim().to_string();
-        
+        let output = nattydate::format_custom(&tokens, &case.format)
+            .trim()
+            .to_string();
+
         let is_pass = output == case.expected;
         if is_pass {
             passed += 1;
             if verbose {
-                println!("✅ TEST {:02} PASS: '{}' -> '{}'", i + 1, case.input, output);
+                println!(
+                    "✅ TEST {:02} PASS: '{}' -> '{}'",
+                    i + 1,
+                    case.input,
+                    output
+                );
             }
         } else {
             failed += 1;
@@ -107,13 +119,18 @@ fn run_test_suite(verbose: bool, file_path: Option<String>) {
 
 fn main() {
     let args = Args::parse();
-    
+
     if args.text.trim().to_lowercase() == "test" {
         run_test_suite(args.verbose, args.test_file);
         return;
     }
 
-    let config = ParseConfig { day_first: args.day_first, resolve_dates: true, mock_now: None, debug: args.debug };
+    let config = ParseConfig {
+        day_first: args.day_first,
+        resolve_dates: true,
+        mock_now: None,
+        debug: args.debug,
+    };
 
     let tokens = nattydate::tokenize_and_classify(&args.text, &config);
 
