@@ -13,6 +13,7 @@ keywords = ["date", "time", "natural-language", "parsing", "nlp"]
 categories = ["date-and-time", "text-processing", "parser-implementations", "command-line-utilities"]
 exclude = ["/target", "/.github", "/build"]
 
+
 [[bin]]
 name = "nattydate"
 path = "src/main.rs"
