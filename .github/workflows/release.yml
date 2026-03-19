@@ -23,10 +23,6 @@ jobs:
             runner: macos-latest
             use_cross: false
             artifact: nattydate
-          - target: x86_64-apple-darwin
-            runner: macos-13         # last Intel runner
-            use_cross: false
-            artifact: nattydate
 
           # ── Linux x86-64 (static musl) ───────────────────────────────────
           - target: x86_64-unknown-linux-musl
