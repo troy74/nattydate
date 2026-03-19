@@ -4,6 +4,7 @@ use chrono::{Datelike, Local, NaiveDate, Duration};
 pub struct ParseConfig {
     pub day_first: bool,
     pub resolve_dates: bool,
+    pub mock_now: Option<NaiveDate>,
 }
 
 impl Default for ParseConfig {
@@ -11,6 +12,7 @@ impl Default for ParseConfig {
         Self {
             day_first: false,
             resolve_dates: true,
+            mock_now: None,
         }
     }
 }
@@ -570,7 +572,7 @@ pub fn parse_iso(s: &str) -> Option<Vec<KnownToken>> {
     let lower = s.to_lowercase();
     if let Some((date_part, rest)) = lower.split_once('t') {
         let mut tokens = Vec::new();
-        if let Some(d) = parse_date_numeric(date_part, &ParseConfig { day_first: false, resolve_dates: false }) {
+        if let Some(d) = parse_date_numeric(date_part, &ParseConfig { day_first: false, resolve_dates: false, mock_now: None }) {
             tokens.push(d);
         } else {
             return None;
@@ -769,8 +771,8 @@ fn resolve_holiday(h: &Holiday, year: i32) -> NaiveDate {
     }
 }
 
-pub fn resolve(tokens: Vec<Token>) -> Vec<Token> {
-    let now = Local::now().date_naive();
+pub fn resolve(tokens: Vec<Token>, config: &ParseConfig) -> Vec<Token> {
+    let now = config.mock_now.unwrap_or_else(|| Local::now().date_naive());
     let mut resolved = Vec::new();
     let mut current_modifier = None;
 
@@ -984,7 +986,7 @@ pub fn tokenize_and_classify(input: &str, config: &ParseConfig) -> Vec<Token> {
     let recombined = recombine(raw);
     let classified = classify(recombined, config);
     if config.resolve_dates {
-        resolve(classified)
+        resolve(classified, config)
     } else {
         classified
     }
@@ -1103,59 +1105,38 @@ pub fn process(input: &str, config: &ParseConfig) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::Deserialize;
 
-    #[test]
-    fn test_tmrw_at_3() {
-        let config = ParseConfig { day_first: false, resolve_dates: false };
-        assert_eq!(process("tmrw @ 3", &config), "tomorrow at 15:00:00");
+    #[derive(Deserialize)]
+    struct TestSuite {
+        mock_now: String,
+        cases: Vec<TestCase>,
     }
 
-    #[test]
-    fn test_nxt_fri_14_00() {
-        let config = ParseConfig { day_first: false, resolve_dates: false };
-        assert_eq!(process("nxt fri 14:00", &config), "next friday at 14:00:00");
-    }
-
-    #[test]
-    fn test_date_numeric() {
-        let config = ParseConfig { day_first: true, resolve_dates: false }; 
-        assert_eq!(process("03/04/2026", &config), "2026-04-03"); 
+    #[derive(Deserialize)]
+    struct TestCase {
+        input: String,
+        expected: String,
+        format: String,
     }
 
     #[test]
-    fn test_iso() {
-        let config = ParseConfig { day_first: false, resolve_dates: false };
-        assert_eq!(process("2026-03-18T08:00:00Z", &config), "2026-03-18 at 08:00:00 UTC"); 
-    }
+    fn run_json_test_suite() {
+        let json_str = include_str!("../tests.json");
+        let suite: TestSuite = serde_json::from_str(json_str).expect("Failed to parse JSON");
+        
+        let mock_date = chrono::NaiveDate::parse_from_str(&suite.mock_now, "%Y-%m-%d").unwrap();
+        
+        let config = ParseConfig {
+            day_first: false,
+            resolve_dates: true,
+            mock_now: Some(mock_date),
+        };
 
-    #[test]
-    fn test_tz() {
-        let config = ParseConfig { day_first: false, resolve_dates: false };
-        assert_eq!(process("08:00:00 UTC+2", &config), "08:00:00 UTC+2");
-    }
-
-    #[test]
-    fn test_fri_day_3pm() {
-        let config = ParseConfig { day_first: false, resolve_dates: false };
-        assert_eq!(process("fri day 3 pm", &config), "friday at 15:00:00");
-    }
-    
-    #[test]
-    fn test_word_numbers() {
-        let config = ParseConfig { day_first: false, resolve_dates: false };
-        assert_eq!(process("nine thirty-five", &config), "09:35:00");
-        assert_eq!(process("nine thirty five", &config), "09:35:00");
-        assert_eq!(process("ten fifteen", &config), "10:15:00");
-        assert_eq!(process("half past ten", &config), "10:30:00");
-        assert_eq!(process("quarter to ten", &config), "09:45:00");
-        assert_eq!(process("quarter past ten", &config), "10:15:00");
-    }
-    
-    #[test]
-    fn test_holidays() {
-        let config = ParseConfig { day_first: false, resolve_dates: true };
-        let year = chrono::Local::now().date_naive().year();
-        let next_year = year + 1;
-        assert!(process("christmas", &config).starts_with(&year.to_string()) || process("christmas", &config).starts_with(&next_year.to_string()));
+        for case in suite.cases {
+            let tokens = tokenize_and_classify(&case.input, &config);
+            let output = format_custom(&tokens, &case.format).trim().to_string();
+            assert_eq!(output, case.expected, "Failed on input: {}", case.input);
+        }
     }
 }
