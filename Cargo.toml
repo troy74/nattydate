@@ -1,6 +1,6 @@
 [package]
 name = "nattydate"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 description = "Lightweight, deterministic natural language date/time preprocessor — no ML, no clock fragility."
 authors = ["Troy Travlos"]
