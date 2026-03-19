@@ -1,265 +1,123 @@
 {
   "mock_now": "2026-03-18",
   "cases": [
-    {
-      "input": "2026-03-18T08:00:00Z",
-      "expected": "2026-03-18 08:00:00 UTC",
-      "format": "YYYY-MM-DD HH:mm:ss Z"
-    },
-    {
-      "input": "7/6/26",
-      "expected": "2026-07-06 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "9-1",
-      "expected": "2026-09-01 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow",
-      "expected": "2026-03-19 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "today",
-      "expected": "2026-03-18 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "yesterday",
-      "expected": "2026-03-17 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "monday week",
-      "expected": "2026-03-30 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "next friday",
-      "expected": "2026-03-27 00:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 9-00",
-      "expected": "2026-03-19 09:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 9:00",
-      "expected": "2026-03-19 09:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 9;00",
-      "expected": "2026-03-19 09:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 9|00",
-      "expected": "2026-03-19 09:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 9:30",
-      "expected": "2026-03-19 09:30:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "monday week at 0700",
-      "expected": "2026-03-30 07:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "monday week at 07h00",
-      "expected": "2026-03-30 07:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow 3 o'clock",
-      "expected": "2026-03-19 15:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 15:00",
-      "expected": "2026-03-19 15:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 3 pm",
-      "expected": "2026-03-19 15:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 3 am",
-      "expected": "2026-03-19 03:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at one am",
-      "expected": "2026-03-19 01:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at nine thirty",
-      "expected": "2026-03-19 09:30:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at nine thirty-five",
-      "expected": "2026-03-19 09:35:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at half past ten",
-      "expected": "2026-03-19 10:30:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at quarter to nine",
-      "expected": "2026-03-19 08:45:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at quarter past nine",
-      "expected": "2026-03-19 09:15:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow morning",
-      "expected": "2026-03-19 09:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow noon",
-      "expected": "2026-03-19 12:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow afternoon",
-      "expected": "2026-03-19 15:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow evening",
-      "expected": "2026-03-19 18:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow night",
-      "expected": "2026-03-19 21:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "monday mrning at one am",
-      "expected": "2026-03-23 01:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "monday mrning at nine thirty-five",
-      "expected": "2026-03-23 09:35:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "christmas",
-      "expected": "2026-12-25",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "spring bank holiday",
-      "expected": "2026-05-25",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "fourth of july",
-      "expected": "2026-07-04",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "halloween",
-      "expected": "2026-10-31",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "thanksgiving",
-      "expected": "2026-11-26",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "memorial day",
-      "expected": "2026-05-25",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "labor day",
-      "expected": "2026-09-07",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "mlk day",
-      "expected": "2027-01-18",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "presidents day",
-      "expected": "2027-02-15",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "veterans day",
-      "expected": "2026-11-11",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "juneteenth",
-      "expected": "2026-06-19",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "valentines day",
-      "expected": "2027-02-14",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "boxing day",
-      "expected": "2026-12-26",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "guy fawkes night",
-      "expected": "2026-11-05",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "saint patricks day",
-      "expected": "2027-03-17",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "may day",
-      "expected": "2026-05-04",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "summer bank holiday",
-      "expected": "2026-08-31",
-      "format": "YYYY-MM-DD"
-    },
-    {
-      "input": "christmas day lunch at 1",
-      "expected": "2026-12-25 13:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    },
-    {
-      "input": "tomorrow at 3pm EDT",
-      "expected": "2026-03-19 15:00:00 EDT",
-      "format": "YYYY-MM-DD HH:mm:ss TZ"
-    },
-    {
-      "input": "nxt fri 14:00",
-      "expected": "2026-03-27 14:00:00",
-      "format": "YYYY-MM-DD HH:mm:ss"
-    }
+    { "input": "2026-03-18T08:00:00Z",           "expected": "2026-03-18 08:00:00 UTC",     "format": "YYYY-MM-DD HH:mm:ss Z" },
+    { "input": "7/6/26",                          "expected": "2026-07-06 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "9-1",                             "expected": "2026-09-01 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow",                        "expected": "2026-03-19 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "today",                           "expected": "2026-03-18 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "yesterday",                       "expected": "2026-03-17 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "monday week",                     "expected": "2026-03-30 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "next friday",                     "expected": "2026-03-27 00:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 9-00",                "expected": "2026-03-19 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 9:00",                "expected": "2026-03-19 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 9;00",                "expected": "2026-03-19 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 9|00",                "expected": "2026-03-19 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 9:30",                "expected": "2026-03-19 09:30:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "monday week at 0700",             "expected": "2026-03-30 07:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "monday week at 07h00",            "expected": "2026-03-30 07:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow 3 o'clock",              "expected": "2026-03-19 15:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 15:00",               "expected": "2026-03-19 15:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 3 pm",                "expected": "2026-03-19 15:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 3 am",                "expected": "2026-03-19 03:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at one am",              "expected": "2026-03-19 01:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at nine thirty",         "expected": "2026-03-19 09:30:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at nine thirty-five",    "expected": "2026-03-19 09:35:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at half past ten",       "expected": "2026-03-19 10:30:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at quarter to nine",     "expected": "2026-03-19 08:45:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at quarter past nine",   "expected": "2026-03-19 09:15:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow morning",                "expected": "2026-03-19 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow noon",                   "expected": "2026-03-19 12:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow afternoon",              "expected": "2026-03-19 15:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow evening",                "expected": "2026-03-19 18:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow night",                  "expected": "2026-03-19 21:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "monday mrning at one am",         "expected": "2026-03-23 01:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "monday mrning at nine thirty-five","expected": "2026-03-23 09:35:00",        "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "christmas",                       "expected": "2026-12-25",                  "format": "YYYY-MM-DD" },
+    { "input": "spring bank holiday",             "expected": "2026-05-25",                  "format": "YYYY-MM-DD" },
+    { "input": "fourth of july",                  "expected": "2026-07-04",                  "format": "YYYY-MM-DD" },
+    { "input": "halloween",                       "expected": "2026-10-31",                  "format": "YYYY-MM-DD" },
+    { "input": "thanksgiving",                    "expected": "2026-11-26",                  "format": "YYYY-MM-DD" },
+    { "input": "memorial day",                    "expected": "2026-05-25",                  "format": "YYYY-MM-DD" },
+    { "input": "labor day",                       "expected": "2026-09-07",                  "format": "YYYY-MM-DD" },
+    { "input": "mlk day",                         "expected": "2027-01-18",                  "format": "YYYY-MM-DD" },
+    { "input": "presidents day",                  "expected": "2027-02-15",                  "format": "YYYY-MM-DD" },
+    { "input": "veterans day",                    "expected": "2026-11-11",                  "format": "YYYY-MM-DD" },
+    { "input": "juneteenth",                      "expected": "2026-06-19",                  "format": "YYYY-MM-DD" },
+    { "input": "valentines day",                  "expected": "2027-02-14",                  "format": "YYYY-MM-DD" },
+    { "input": "boxing day",                      "expected": "2026-12-26",                  "format": "YYYY-MM-DD" },
+    { "input": "guy fawkes night",                "expected": "2026-11-05",                  "format": "YYYY-MM-DD" },
+    { "input": "saint patricks day",              "expected": "2027-03-17",                  "format": "YYYY-MM-DD" },
+    { "input": "may day",                         "expected": "2026-05-04",                  "format": "YYYY-MM-DD" },
+    { "input": "summer bank holiday",             "expected": "2026-08-31",                  "format": "YYYY-MM-DD" },
+    { "input": "christmas day lunch at 1",        "expected": "2026-12-25 13:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at 3pm EDT",             "expected": "2026-03-19 15:00:00 EDT",     "format": "YYYY-MM-DD HH:mm:ss TZ" },
+    { "input": "nxt fri 14:00",                   "expected": "2026-03-27 14:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+
+    { "input": "last monday",                     "expected": "2026-03-16",                  "format": "YYYY-MM-DD" },
+    { "input": "last tuesday",                    "expected": "2026-03-17",                  "format": "YYYY-MM-DD" },
+    { "input": "last wednesday",                  "expected": "2026-03-11",                  "format": "YYYY-MM-DD" },
+    { "input": "last thursday",                   "expected": "2026-03-12",                  "format": "YYYY-MM-DD" },
+    { "input": "last friday",                     "expected": "2026-03-13",                  "format": "YYYY-MM-DD" },
+    { "input": "last saturday",                   "expected": "2026-03-14",                  "format": "YYYY-MM-DD" },
+    { "input": "last sunday",                     "expected": "2026-03-15",                  "format": "YYYY-MM-DD" },
+
+    { "input": "monday last",                     "expected": "2026-03-16",                  "format": "YYYY-MM-DD" },
+    { "input": "friday last",                     "expected": "2026-03-13",                  "format": "YYYY-MM-DD" },
+    { "input": "tuesday next",                    "expected": "2026-03-31",                  "format": "YYYY-MM-DD" },
+
+    { "input": "previous monday",                 "expected": "2026-03-16",                  "format": "YYYY-MM-DD" },
+    { "input": "past friday",                     "expected": "2026-03-13",                  "format": "YYYY-MM-DD" },
+    { "input": "prior thursday",                  "expected": "2026-03-12",                  "format": "YYYY-MM-DD" },
+    { "input": "following friday",                "expected": "2026-03-27",                  "format": "YYYY-MM-DD" },
+
+    { "input": "1 day ago",                       "expected": "2026-03-17",                  "format": "YYYY-MM-DD" },
+    { "input": "3 days ago",                      "expected": "2026-03-15",                  "format": "YYYY-MM-DD" },
+    { "input": "10 days ago",                     "expected": "2026-03-08",                  "format": "YYYY-MM-DD" },
+    { "input": "1 week ago",                      "expected": "2026-03-11",                  "format": "YYYY-MM-DD" },
+    { "input": "2 weeks ago",                     "expected": "2026-03-04",                  "format": "YYYY-MM-DD" },
+    { "input": "1 month ago",                     "expected": "2026-02-16",                  "format": "YYYY-MM-DD" },
+    { "input": "3 days ago at noon",              "expected": "2026-03-15 12:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "2 weeks ago at 6pm",              "expected": "2026-03-04 18:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+
+    { "input": "mnday",                           "expected": "2026-03-23",                  "format": "YYYY-MM-DD" },
+    { "input": "tuseday",                         "expected": "2026-03-24",                  "format": "YYYY-MM-DD" },
+    { "input": "wensday",                         "expected": "2026-03-25",                  "format": "YYYY-MM-DD" },
+    { "input": "thurday",                         "expected": "2026-03-19",                  "format": "YYYY-MM-DD" },
+    { "input": "satrday",                         "expected": "2026-03-21",                  "format": "YYYY-MM-DD" },
+    { "input": "sundy",                           "expected": "2026-03-22",                  "format": "YYYY-MM-DD" },
+    { "input": "ysterday",                        "expected": "2026-03-17",                  "format": "YYYY-MM-DD" },
+    { "input": "tomorow",                         "expected": "2026-03-19",                  "format": "YYYY-MM-DD" },
+    { "input": "frday",                           "expected": "2026-03-20",                  "format": "YYYY-MM-DD" },
+    { "input": "fryday",                          "expected": "2026-03-20",                  "format": "YYYY-MM-DD" },
+
+    { "input": "9am",                             "expected": "09:00:00",                    "format": "HH:mm:ss" },
+    { "input": "6pm",                             "expected": "18:00:00",                    "format": "HH:mm:ss" },
+    { "input": "12am",                            "expected": "00:00:00",                    "format": "HH:mm:ss" },
+    { "input": "12pm",                            "expected": "12:00:00",                    "format": "HH:mm:ss" },
+    { "input": "3:30pm",                          "expected": "15:30:00",                    "format": "HH:mm:ss" },
+    { "input": "14:30:00",                        "expected": "14:30:00",                    "format": "HH:mm:ss" },
+
+    { "input": "yesterday morning",               "expected": "2026-03-17 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "yesterday evening",               "expected": "2026-03-17 18:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "3pm tomorrow",                    "expected": "2026-03-19 15:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "next monday at 9am",              "expected": "2026-03-30 09:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "last friday at noon",             "expected": "2026-03-13 12:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "last tuesday at 2pm",             "expected": "2026-03-17 14:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+
+    { "input": "18-3-2026",                       "expected": "2026-03-18",                  "format": "YYYY-MM-DD" },
+    { "input": "2026/03/18",                      "expected": "2026-03-18",                  "format": "YYYY-MM-DD" },
+    { "input": "18.3.26",                         "expected": "2026-03-18",                  "format": "YYYY-MM-DD" },
+
+    { "input": "new years day",                   "expected": "2027-01-01",                  "format": "YYYY-MM-DD" },
+    { "input": "bonfire night",                   "expected": "2026-11-05",                  "format": "YYYY-MM-DD" },
+
+    { "input": "next monday at two in the morning", "expected": "2026-03-30 02:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "next monday morning at 2",         "expected": "2026-03-30 02:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+    { "input": "tomorrow at too in the morning",   "expected": "2026-03-19 02:00:00",         "format": "YYYY-MM-DD HH:mm:ss" },
+
+    { "input": "xyzzy blob flargh",               "expected": "00:00:00",                    "format": "HH:mm:ss" },
+    { "input": "the quick brown fox",             "expected": "00:00:00",                    "format": "HH:mm:ss" },
+    { "input": "32/13/2026",                      "expected": "YYYY-MM-DD",                  "format": "YYYY-MM-DD" }
   ]
 }

@@ -1,0 +1,4 @@
+[toolchain]
+# Minimum required: 1.85.0 (Rust 2024 edition)
+channel = "stable"
+components = ["rustfmt", "clippy"]

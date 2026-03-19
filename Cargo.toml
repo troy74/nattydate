@@ -2,6 +2,30 @@
 name = "nattydate"
 version = "0.1.0"
 edition = "2024"
+description = "Lightweight, deterministic natural language date/time preprocessor — no ML, no clock fragility."
+authors = ["Troy Travlos"]
+repository = "https://github.com/troy74/nattydate"
+homepage = "https://github.com/troy74/nattydate"
+documentation = "https://docs.rs/nattydate"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["date", "time", "natural-language", "parsing", "nlp"]
+categories = ["date-and-time", "text-processing", "parser-implementations", "command-line-utilities"]
+exclude = ["/target", "/.github", "/build", "tests.json"]
+
+[[bin]]
+name = "nattydate"
+path = "src/main.rs"
+
+[lib]
+name = "nattydate"
+path = "src/lib.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
 
 [dependencies]
 chrono = "0.4.44"

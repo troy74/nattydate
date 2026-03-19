@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# Build configuration
+# ---------------------------------------------------------------------------
+# Default target: native host.
+# Override per-invocation:  cargo build --target aarch64-unknown-linux-gnu
+# Or export:                CARGO_BUILD_TARGET=aarch64-apple-darwin cargo build
+#
+# CI cross-compilation for Linux ARM targets is handled via `cross`
+# (https://github.com/cross-rs/cross), which uses Docker containers and
+# does not require the linkers below to be installed on the host.
+#
+# For local cross-compilation on macOS you will need the relevant toolchain,
+# e.g.:  brew install FiloSottile/musl-cross/musl-cross
+# ---------------------------------------------------------------------------
+
+# Raspberry Pi 4/5 — 64-bit OS (aarch64)
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+# Raspberry Pi 2/3/4 — 32-bit OS (armv7)
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
+# Static Linux binary (portable across distros)
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"

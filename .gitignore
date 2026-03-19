@@ -1,1 +1,23 @@
+# Build artefacts
 /target
+/build/nattydate
+/build/nattydate.exe
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Env / secrets
+.env
+.env.*
+
+# Cargo
+Cargo.lock         # keep for binaries; remove this line if publishing a library

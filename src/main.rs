@@ -38,8 +38,6 @@ enum OutputFormat {
     Canonical,
     /// JSON array of classified tokens
     Json,
-    /// Apply a custom template string
-    Custom,
 }
 
 #[derive(Deserialize)]
@@ -119,27 +117,15 @@ fn main() {
 
     let tokens = nattydate::tokenize_and_classify(&args.text, &config);
 
-    match args.output_format {
-        OutputFormat::Canonical => {
-            if let Some(fmt) = args.custom_format {
-                println!("{}", nattydate::format_custom(&tokens, &fmt));
-            } else {
-                println!("{}", nattydate::to_canonical(tokens));
-            }
-        }
-        OutputFormat::Json => {
-            match serde_json::to_string_pretty(&tokens) {
+    if let Some(fmt) = args.custom_format {
+        println!("{}", nattydate::format_custom(&tokens, &fmt));
+    } else {
+        match args.output_format {
+            OutputFormat::Canonical => println!("{}", nattydate::to_canonical(&tokens)),
+            OutputFormat::Json => match serde_json::to_string_pretty(&tokens) {
                 Ok(json) => println!("{}", json),
                 Err(e) => eprintln!("Error serializing to JSON: {}", e),
-            }
-        }
-        OutputFormat::Custom => {
-            if let Some(fmt) = args.custom_format {
-                println!("{}", nattydate::format_custom(&tokens, &fmt));
-            } else {
-                eprintln!("Error: --custom-format (-f) must be provided when using --output-format custom");
-                std::process::exit(1);
-            }
+            },
         }
     }
 }
